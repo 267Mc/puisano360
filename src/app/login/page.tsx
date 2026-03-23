@@ -21,8 +21,7 @@ function LoginForm() {
   
   // Detect if the user is a parent or teacher from the URL
   const role = searchParams.get('role') || 'parent';
-
-  const handleLogin = async (e: React.FormEvent) => {
+const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -39,19 +38,24 @@ function LoginForm() {
       }
 
       if (data.user) {
-        // Redirect specifically based on the role in the URL
-        if (role === 'teacher') {
+        // FORCE the code to check the real URL in the browser right now
+        const params = new URLSearchParams(window.location.search);
+        const urlRole = params.get('role');
+
+        console.log("Detected role from URL:", urlRole); // This helps you debug in the console
+
+        if (urlRole === 'teacher') {
           router.push('/teacher');
         } else {
           router.push('/parent');
         }
       }
     } catch (err) {
-      alert("An unexpected error occurred. Please try again.");
+      alert("An error occurred during sign in.");
       setLoading(false);
     }
   };
-
+  
   return (
     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
       {/* Visual Header */}

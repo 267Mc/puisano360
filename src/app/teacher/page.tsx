@@ -1,80 +1,90 @@
 'use client';
-import { Users, MessageSquare, School, Bell, Search } from 'lucide-react';
+import { useState } from 'react';
+import { LayoutDashboard, FileUp, Users, LogOut, CheckCircle } from 'lucide-react';
+import Link from 'next/link';
 
 export default function TeacherDashboard() {
-  // These matches your Supabase 'profiles' table exactly
-  const allParents = [
-    { name: "Aone Motse", school: "Gaborone International", student: "Tshepo Motse", status: "Active" },
-    { name: "Lesedi Leepo", school: "Northside Primary", student: "Neo Leepo", status: "New" },
-    { name: "Ford Sibanda", school: "Westwood International", student: "Lindiwe Sibanda", status: "Active" }
-  ];
+  const [uploading, setUploading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  // For the demo, we'll assume the logged-in teacher is Mr. Thabo Motsamai (Gaborone International)
-  const currentSchool = "Gaborone International";
-  const filteredParents = allParents.filter(p => p.school === currentSchool);
+  const handleUpload = (e: React.FormEvent) => {
+    e.preventDefault();
+    setUploading(true);
+    // Simulate upload delay for demo
+    setTimeout(() => {
+      setUploading(false);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    }, 2000);
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="bg-blue-900 text-white p-6 shadow-lg">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <School size={32} className="text-blue-300" />
-            <div>
-              <h1 className="text-xl font-bold">Teacher Console</h1>
-              <p className="text-blue-300 text-sm">{currentSchool}</p>
-            </div>
+    <div className="min-h-screen bg-slate-50 flex">
+      {/* Sidebar */}
+      <aside className="w-64 bg-blue-900 text-white p-6 hidden md:block">
+        <h2 className="text-2xl font-bold mb-8">Puisano360</h2>
+        <nav className="space-y-4">
+          <div className="flex items-center gap-3 p-3 bg-blue-800 rounded-xl cursor-pointer">
+            <LayoutDashboard size={20} /> <span>Dashboard</span>
           </div>
-          <div className="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-full">
-            <span className="font-medium">Mr. Thabo Motsamai</span>
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-xs font-bold">TM</div>
+          <div className="flex items-center gap-3 p-3 hover:bg-blue-800 rounded-xl cursor-pointer transition">
+            <Users size={20} /> <span>My Students</span>
           </div>
+        </nav>
+        <div className="absolute bottom-8">
+          <Link href="/login" className="flex items-center gap-3 text-blue-300 hover:text-white transition">
+            <LogOut size={20} /> <span>Logout</span>
+          </Link>
         </div>
-      </div>
+      </aside>
 
-      <main className="max-w-7xl mx-auto p-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-            <Users className="text-blue-600 mb-2" size={28} />
-            <p className="text-slate-500 text-sm font-medium">My Parents</p>
-            <h2 className="text-3xl font-black text-slate-900">{filteredParents.length}</h2>
+      {/* Main Content */}
+      <main className="flex-1 p-8">
+        <header className="flex justify-between items-center mb-10">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Teacher Dashboard</h1>
+            <p className="text-slate-500 font-medium">Gaborone International School | Mr. Thabo Motsamai</p>
           </div>
-          {/* ... other stats ... */}
-        </div>
+        </header>
 
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-            <h2 className="text-xl font-bold text-slate-900">Parent Directory</h2>
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
-              <input type="text" placeholder="Search..." className="pl-10 pr-4 py-2 bg-slate-50 border rounded-xl text-sm outline-none" />
+        <div className="max-w-4xl bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="p-8 border-b border-slate-100 bg-slate-50">
+            <h3 className="text-xl font-bold text-slate-900">Upload Student Progress Report</h3>
+            <p className="text-slate-500 text-sm">Select a student and upload their termly PDF report.</p>
+          </div>
+
+          <form onSubmit={handleUpload} className="p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Select Student</label>
+                <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                  <option>Tshepo Motse</option>
+                  <option>Ama Mensah</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Term</label>
+                <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                  <option>Term 1 - 2026</option>
+                  <option>Term 2 - 2026</option>
+                </select>
+              </div>
             </div>
-          </div>
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
-              <tr>
-                <th className="px-6 py-4">Parent Name</th>
-                <th className="px-6 py-4">Student</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredParents.map((parent, i) => (
-                <tr key={i} className="hover:bg-slate-50">
-                  <td className="px-6 py-4 font-semibold text-slate-900">{parent.name}</td>
-                  <td className="px-6 py-4 text-slate-600">{parent.student}</td>
-                  <td className="px-6 py-4">
-                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
-                      {parent.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button className="text-blue-600 font-bold hover:underline text-sm">Send Update</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+            <div className="border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center hover:border-blue-400 transition cursor-pointer bg-slate-50">
+              <FileUp className="mx-auto text-slate-400 mb-4" size={40} />
+              <p className="text-slate-600 font-medium">Click to upload or drag and drop</p>
+              <p className="text-slate-400 text-xs">PDF, PNG or JPG (max. 10MB)</p>
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={uploading}
+              className={`w-full py-4 rounded-xl font-bold text-white transition shadow-lg flex justify-center items-center gap-2 ${success ? 'bg-green-600' : 'bg-blue-600 hover:bg-blue-700'}`}
+            >
+              {uploading ? 'Processing...' : success ? <><CheckCircle size={20}/> Report Uploaded</> : 'Submit Progress Report'}
+            </button>
+          </form>
         </div>
       </main>
     </div>
