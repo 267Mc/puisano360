@@ -1,3 +1,8 @@
+'use client';
+import Link from 'next/link'; // <--- Check if this line is there!
+import { GraduationCap, ArrowLeft } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+
 // ... (previous imports)
 export default function LoginPage() {
   return (
