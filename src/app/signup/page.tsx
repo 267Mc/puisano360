@@ -1,163 +1,152 @@
-'use client';
+'use client'
+import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabaseClient'
 
-import { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { GraduationCap, ArrowLeft, User, Mail, Lock, School } from 'lucide-react';
-
-// Initialize Supabase client
-// Make sure these match your .env.local file exactly
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const SCHOOLS = [
+  { id: '11111111-0000-0000-0000-000000000001', name: 'Gaborone International' },
+  { id: '11111111-0000-0000-0000-000000000002', name: 'Westwood International' },
+  { id: '11111111-0000-0000-0000-000000000003', name: 'Northside Primary' },
+]
 
 export default function SignupPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [school, setSchool] = useState('Gaborone International School');
-  const [role, setRole] = useState('parent');
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const router = useRouter()
+  const supabase = createClient()
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const [role, setRole]         = useState<'parent' | 'teacher'>('parent')
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail]       = useState('')
+  const [password, setPassword] = useState('')
+  const [schoolId, setSchoolId] = useState(SCHOOLS[0].id)
+  const [error, setError]       = useState('')
+  const [success, setSuccess]   = useState('')
+  const [loading, setLoading]   = useState(false)
 
-    // 1. Sign up the user in Supabase Auth
-    const { data, error: authError } = await supabase.auth.signUp({
+  async function handleSignup(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+    setLoading(true)
+
+    // Create auth user
+    const { data, error: authError } = await supabase.auth.signUp({ email, password })
+
+    if (authError || !data.user) {
+      setError(authError?.message ?? 'Sign up failed.')
+      setLoading(false)
+      return
+    }
+
+    // Insert into appropriate profile table
+    const table = role === 'teacher' ? 'teachers' : 'parents'
+    const { error: insertError } = await supabase.from(table).insert({
+      auth_id: data.user.id,
+      full_name: fullName,
       email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          school_name: school,
-          role: role,
-        }
-      }
-    });
+      school_id: schoolId,
+    })
 
-    if (authError) {
-      alert(`Signup Error: ${authError.message}`);
-      setLoading(false);
-      return;
+    if (insertError) {
+      setError(insertError.message)
+      setLoading(false)
+      return
     }
 
-    if (data.user) {
-      alert("Registration successful! Please check your email for a confirmation link.");
-      router.push('/login');
-    }
-    
-    setLoading(false);
-  };
+    setSuccess('Account created! You can now sign in.')
+    setTimeout(() => router.push('/login'), 2000)
+  }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-        
-        {/* Header Section */}
-        <div className="bg-blue-600 p-8 text-white text-center">
-          <Link href="/" className="inline-flex items-center gap-2 text-blue-100 hover:text-white mb-4 text-sm transition">
-            <ArrowLeft size={16} /> Back to Home
-          </Link>
-          <div className="flex justify-center mb-2">
-            <GraduationCap size={48} />
-          </div>
-          <h1 className="text-2xl font-bold">Join Puisano360</h1>
-          <p className="text-blue-100 text-sm">Create your account to get started</p>
+    <div className="auth-wrapper">
+      <div className="auth-card">
+        <div className="auth-logo">
+          <h1>Puisano<span>360</span></h1>
+          <p>Create your account to get started</p>
         </div>
 
-        {/* Form Section */}
-        <form onSubmit={handleSignup} className="p-8 space-y-4">
-          
-          {/* Role Selection */}
-          <div className="flex gap-2 p-1 bg-slate-100 rounded-xl mb-2">
-            <button
-              type="button"
-              onClick={() => setRole('parent')}
-              className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${role === 'parent' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
-            >
-              Parent
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole('teacher')}
-              className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${role === 'teacher' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
-            >
-              Teacher
-            </button>
+        {error   && <div className="error-msg"   style={{ marginBottom: '1rem' }}>{error}</div>}
+        {success && <div className="success-msg" style={{ marginBottom: '1rem' }}>{success}</div>}
+
+        <form onSubmit={handleSignup} className="auth-form">
+          {/* Role toggle */}
+          <div style={{ display: 'flex', background: 'var(--off-white)', borderRadius: '10px', padding: '4px', gap: '4px' }}>
+            {(['parent', 'teacher'] as const).map(r => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRole(r)}
+                style={{
+                  flex: 1,
+                  padding: '0.55rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: role === r ? 'var(--green)' : 'transparent',
+                  color: role === r ? 'white' : 'var(--text-muted)',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  transition: 'all 0.18s',
+                }}
+              >
+                {r === 'parent' ? '👨‍👩‍👧 Parent' : '🏫 Teacher'}
+              </button>
+            ))}
           </div>
 
-          {/* School Selection */}
-          <div className="relative">
-            <School className="absolute left-3 top-3.5 text-slate-400" size={20} />
-            <select 
-              value={school}
-              onChange={(e) => setSchool(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-slate-900"
-            >
-              <option>Gaborone International School</option>
-              <option>Westwood International</option>
-              <option>Northside Primary</option>
+          <div className="form-group">
+            <label>Full Name</label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={e => setFullName(e.target.value)}
+              placeholder="e.g. Aone Motse"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Email Address</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Min. 6 characters"
+              minLength={6}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>School</label>
+            <select value={schoolId} onChange={e => setSchoolId(e.target.value)}>
+              {SCHOOLS.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
             </select>
           </div>
 
-          <div className="relative">
-            <User className="absolute left-3 top-3.5 text-slate-400" size={20} />
-            <input 
-              type="text" 
-              placeholder="Full Name (e.g. Mr Thabo Motsamai)" 
-              required 
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-            />
-          </div>
-
-          <div className="relative">
-            <Mail className="absolute left-3 top-3.5 text-slate-400" size={20} />
-            <input 
-              type="email" 
-              placeholder="Email Address" 
-              required 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-            />
-          </div>
-
-          <div className="relative">
-            <Lock className="absolute left-3 top-3.5 text-slate-400" size={20} />
-            <input 
-              type="password" 
-              placeholder="Create Password" 
-              required 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-            />
-          </div>
-
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg mt-2 disabled:bg-slate-400"
-          >
-            {loading ? 'Creating Account...' : 'Register for Puisano360'}
+          <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center', padding: '0.8rem' }}>
+            {loading ? 'Creating account…' : 'Create Account'}
           </button>
-
-          <div className="text-center pt-4">
-            <p className="text-slate-500 text-sm">
-              Already have an account?{' '}
-              <Link href="/login" className="text-blue-600 font-bold hover:underline">
-                Login
-              </Link>
-            </p>
-          </div>
         </form>
+
+        <div className="auth-footer">
+          Already have an account?{' '}
+          <Link href="/login">Sign in</Link>
+        </div>
       </div>
     </div>
-  );
+  )
 }

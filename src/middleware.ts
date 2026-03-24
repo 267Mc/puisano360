@@ -1,74 +1,40 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
+  let supabaseResponse = NextResponse.next({ request })
 
-  // 1. Initialize the Supabase Client for Middleware
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, val: string, options: CookieOptions) {
-          // Changed 'value' to 'value: val' to fix the shorthand error
-          request.cookies.set({ name, value: val, ...options })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({ name, value: val, ...options })
-        },
-        remove(name: string, options: CookieOptions) {
-          // Changed 'value' to 'value: ""' to fix the shorthand error
-          request.cookies.set({ name, value: '', ...options })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({ name, value: '', ...options })
+        getAll() { return request.cookies.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
         },
       },
     }
   )
 
-  // 2. Get the current user session
-  const { data: { session } } = await supabase.auth.getSession()
-  const url = request.nextUrl.clone()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  // 3. PROTECTION: If not logged in, send to login page
-  if (!session && (url.pathname.startsWith('/teacher') || url.pathname.startsWith('/parent'))) {
+  const protectedPaths = ['/parentdashboard', '/teacherdashboard']
+  const isProtected = protectedPaths.some(p => request.nextUrl.pathname.startsWith(p))
+
+  if (isProtected && !user) {
+    const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // 4. ROLE-BASED REDIRECT: Ensure Teachers stay in /teacher and Parents in /parent
-  if (session) {
-    const role = session.user.user_metadata.role
-
-    if (url.pathname.startsWith('/parent') && role === 'teacher') {
-      url.pathname = '/teacher'
-      return NextResponse.redirect(url)
-    }
-
-    if (url.pathname.startsWith('/teacher') && role === 'parent') {
-      url.pathname = '/parent'
-      return NextResponse.redirect(url)
-    }
-  }
-
-  return response
+  return supabaseResponse
 }
 
 export const config = {
-  matcher: ['/teacher/:path*', '/parent/:path*', '/login'],
+  matcher: ['/parentdashboard/:path*', '/teacherdashboard/:path*'],
 }
