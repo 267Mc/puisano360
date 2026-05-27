@@ -14,6 +14,11 @@ export default function LoginPage() {
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
 
+  const [showForgot, setShowForgot]         = useState(false)
+  const [forgotEmail, setForgotEmail]       = useState('')
+  const [forgotMsg, setForgotMsg]           = useState('')
+  const [forgotLoading, setForgotLoading]   = useState(false)
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setError('')
@@ -29,11 +34,7 @@ export default function LoginPage() {
 
     if (role === 'teacher') {
       const { data: teacher } = await supabase
-        .from('teachers')
-        .select('id')
-        .eq('auth_id', data.user.id)
-        .single()
-
+        .from('teachers').select('id').eq('auth_id', data.user.id).single()
       if (!teacher) {
         setError('No teacher account found for this email.')
         await supabase.auth.signOut()
@@ -43,11 +44,7 @@ export default function LoginPage() {
       router.push('/teacherdashboard')
     } else {
       const { data: parent } = await supabase
-        .from('parents')
-        .select('id')
-        .eq('auth_id', data.user.id)
-        .single()
-
+        .from('parents').select('id').eq('auth_id', data.user.id).single()
       if (!parent) {
         setError('No parent account found for this email.')
         await supabase.auth.signOut()
@@ -58,84 +55,109 @@ export default function LoginPage() {
     }
   }
 
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault()
+    setForgotMsg('')
+    setForgotLoading(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+      redirectTo: window.location.origin + '/reset-password',
+    })
+    if (error) {
+      setForgotMsg('Error: ' + error.message)
+    } else {
+      setForgotMsg('Reset link sent! Check your email inbox.')
+      setForgotEmail('')
+    }
+    setForgotLoading(false)
+  }
+
   return (
     <div className="auth-wrapper">
       <div className="auth-card">
-        {/* Logo */}
+
         <div className="auth-logo">
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-            <img
-              src="/logo.jpg"
-              alt="Puisano360"
-              style={{ height: '90px', width: 'auto', objectFit: 'contain' }}
-            />
+            <img src="/logo.jpg" alt="Puisano360" style={{ height: '90px', width: 'auto', objectFit: 'contain' }} />
           </div>
-          <p>Welcome back — sign in to continue</p>
+          <p>{showForgot ? 'Reset your password' : 'Welcome back — sign in to continue'}</p>
         </div>
 
-        {error && <div className="error-msg" style={{ marginBottom: '1rem' }}>{error}</div>}
-
-        <form onSubmit={handleLogin} className="auth-form">
-          {/* Role Toggle */}
-          <div style={{ display: 'flex', background: 'var(--off-white)', borderRadius: '10px', padding: '4px', gap: '4px' }}>
-            {(['parent', 'teacher'] as const).map(r => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRole(r)}
-                style={{
-                  flex: 1,
-                  padding: '0.55rem',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: role === r ? 'var(--green)' : 'transparent',
-                  color: role === r ? 'white' : 'var(--text-muted)',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  transition: 'all 0.18s',
-                  textTransform: 'capitalize',
-                }}
-              >
-                {r === 'parent' ? '👨‍👩‍👧 Parent' : '🏫 Teacher'}
+        {showForgot ? (
+          <>
+            {forgotMsg && (
+              <div className={forgotMsg.startsWith('Error') ? 'error-msg' : 'success-msg'} style={{ marginBottom: '1rem' }}>
+                {forgotMsg.startsWith('Error') ? forgotMsg : '✅ ' + forgotMsg}
+              </div>
+            )}
+            <form onSubmit={handleForgotPassword} className="auth-form">
+              <div className="form-group">
+                <label>Your Email Address</label>
+                <input
+                  type="email"
+                  value={forgotEmail}
+                  onChange={e => setForgotEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+              <button type="submit" className="btn btn-primary" disabled={forgotLoading}
+                style={{ width: '100%', justifyContent: 'center', padding: '0.8rem' }}>
+                {forgotLoading ? 'Sending…' : '📧 Send Reset Link'}
               </button>
-            ))}
-          </div>
+            </form>
+            <div className="auth-footer" style={{ marginTop: '1.25rem' }}>
+              <button onClick={() => { setShowForgot(false); setForgotMsg('') }}
+                style={{ background: 'none', border: 'none', color: 'var(--green)', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}>
+                ← Back to Sign In
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {error && <div className="error-msg" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-          <div className="form-group">
-            <label>Email Address</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
-          </div>
+            <form onSubmit={handleLogin} className="auth-form">
+              <div style={{ display: 'flex', background: 'var(--off-white)', borderRadius: '10px', padding: '4px', gap: '4px' }}>
+                {(['parent', 'teacher'] as const).map(r => (
+                  <button key={r} type="button" onClick={() => setRole(r)}
+                    style={{
+                      flex: 1, padding: '0.55rem', borderRadius: '8px', border: 'none',
+                      background: role === r ? 'var(--green)' : 'transparent',
+                      color: role === r ? 'white' : 'var(--text-muted)',
+                      fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.18s',
+                    }}>
+                    {r === 'parent' ? '👨‍👩‍👧 Parent' : '🏫 Teacher'}
+                  </button>
+                ))}
+              </div>
 
-          <div className="form-group">
-            <label>Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
-          </div>
+              <div className="form-group">
+                <label>Email Address</label>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
+              </div>
 
-          <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center', padding: '0.8rem' }}>
-            {loading ? 'Signing in…' : 'Sign In'}
-          </button>
-        </form>
+              <div className="form-group">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                  <label style={{ margin: 0 }}>Password</label>
+                  <button type="button" onClick={() => setShowForgot(true)}
+                    style={{ background: 'none', border: 'none', color: 'var(--green)', fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem', padding: 0 }}>
+                    Forgot password?
+                  </button>
+                </div>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
+              </div>
 
-        <div className="auth-footer">
-          Don&apos;t have an account?{' '}
-          <Link href="/signup">Create one</Link>
-        </div>
+              <button type="submit" className="btn btn-primary" disabled={loading}
+                style={{ width: '100%', justifyContent: 'center', padding: '0.8rem' }}>
+                {loading ? 'Signing in…' : 'Sign In'}
+              </button>
+            </form>
 
-        <div style={{
-          marginTop: '1.25rem',
-          padding: '0.85rem',
-          background: 'var(--green-pale)',
-          borderRadius: 'var(--radius-sm)',
-          fontSize: '0.82rem',
-          color: 'var(--text-muted)',
-          lineHeight: 1.6,
-        }}>
-          <strong style={{ color: 'var(--green)' }}>Demo accounts</strong><br />
-          Parent: aone@puisano360.com<br />
-          Teacher: thabo@puisano360.com<br />
-          (use the password you set in Supabase)
-        </div>
+            <div className="auth-footer">
+              Don&apos;t have an account? <Link href="/signup">Create one</Link>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
