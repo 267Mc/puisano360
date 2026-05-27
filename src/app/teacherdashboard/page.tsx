@@ -33,7 +33,7 @@ export default function TeacherDashboard() {
   const [annLoading, setAnnLoading] = useState(false)
 
   const [meetTitle, setMeetTitle]     = useState('')
-  const [meetLink, setMeetLink]       = useState('')
+  const [meetLink, setMeetLink]       = useState('https://us05web.zoom.us/j/83583305542?pwd=u5NGRNSfKPeexY1KcT4sQRvgQaE0k8.1')
   const [meetDate, setMeetDate]       = useState('')
   const [meetLoading, setMeetLoading] = useState(false)
 
@@ -281,8 +281,11 @@ export default function TeacherDashboard() {
                   <input value={meetTitle} onChange={e => setMeetTitle(e.target.value)} placeholder="e.g. Term 2 PTA Meeting" required />
                 </div>
                 <div className="form-group">
-                  <label>Video Call Link (Google Meet / Zoom)</label>
-                  <input value={meetLink} onChange={e => setMeetLink(e.target.value)} placeholder="https://meet.google.com/..." required />
+                  <label>Zoom Meeting Link</label>
+                  <input value={meetLink} onChange={e => setMeetLink(e.target.value)} placeholder="https://us05web.zoom.us/j/..." required />
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
+                    ✅ Your Zoom link is pre-filled — change it per meeting if needed.
+                  </span>
                 </div>
                 <div className="form-group">
                   <label>Date &amp; Time</label>

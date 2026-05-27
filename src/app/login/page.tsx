@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabaseClient'
 
@@ -27,7 +28,6 @@ export default function LoginPage() {
       return
     }
 
-    // Check which table this user belongs to
     if (role === 'teacher') {
       const { data: teacher } = await supabase
         .from('teachers')
@@ -62,8 +62,17 @@ export default function LoginPage() {
   return (
     <div className="auth-wrapper">
       <div className="auth-card">
+        {/* Logo */}
         <div className="auth-logo">
-          <h1>Puisano<span>360</span></h1>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+            <Image
+              src="/logo.jpg"
+              alt="Puisano360"
+              width={180}
+              height={90}
+              style={{ objectFit: 'contain' }}
+            />
+          </div>
           <p>Welcome back — sign in to continue</p>
         </div>
 

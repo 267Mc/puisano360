@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabaseClient'
 
@@ -29,7 +30,6 @@ export default function SignupPage() {
     setSuccess('')
     setLoading(true)
 
-    // Create auth user
     const { data, error: authError } = await supabase.auth.signUp({ email, password })
 
     if (authError || !data.user) {
@@ -38,7 +38,6 @@ export default function SignupPage() {
       return
     }
 
-    // Insert into appropriate profile table
     const table = role === 'teacher' ? 'teachers' : 'parents'
     const { error: insertError } = await supabase.from(table).insert({
       auth_id: data.user.id,
@@ -60,8 +59,17 @@ export default function SignupPage() {
   return (
     <div className="auth-wrapper">
       <div className="auth-card">
+        {/* Logo */}
         <div className="auth-logo">
-          <h1>Puisano<span>360</span></h1>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+            <Image
+              src="/logo.jpg"
+              alt="Puisano360"
+              width={180}
+              height={90}
+              style={{ objectFit: 'contain' }}
+            />
+          </div>
           <p>Create your account to get started</p>
         </div>
 
@@ -96,36 +104,17 @@ export default function SignupPage() {
 
           <div className="form-group">
             <label>Full Name</label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={e => setFullName(e.target.value)}
-              placeholder="e.g. Aone Motse"
-              required
-            />
+            <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="e.g. Aone Motse" required />
           </div>
 
           <div className="form-group">
             <label>Email Address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-            />
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
           </div>
 
           <div className="form-group">
             <label>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="Min. 6 characters"
-              minLength={6}
-              required
-            />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 6 characters" minLength={6} required />
           </div>
 
           <div className="form-group">

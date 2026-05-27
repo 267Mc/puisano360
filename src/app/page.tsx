@@ -1,12 +1,16 @@
 'use client'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function Home() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Nav */}
       <nav className="nav">
-        <span className="nav-logo">Puisano<span>360</span></span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Image src="/logo.jpg" alt="Puisano360 Logo" width={44} height={44} style={{ borderRadius: '8px', objectFit: 'contain', background: 'white', padding: '2px' }} />
+          <span className="nav-logo">Puisano<span>360</span></span>
+        </div>
         <div className="nav-right">
           <Link href="/login" className="btn btn-gold" style={{ fontSize: '0.9rem' }}>Sign In</Link>
         </div>
@@ -24,6 +28,23 @@ export default function Home() {
         padding: '4rem 1.5rem',
         gap: '1.5rem',
       }}>
+        {/* Logo */}
+        <div style={{
+          background: 'white',
+          borderRadius: '20px',
+          padding: '1rem 2rem',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+          marginBottom: '0.5rem',
+        }}>
+          <Image
+            src="/logo.jpg"
+            alt="Puisano360"
+            width={220}
+            height={110}
+            style={{ objectFit: 'contain', display: 'block' }}
+          />
+        </div>
+
         <div style={{
           background: 'rgba(201,152,26,0.15)',
           border: '1px solid rgba(201,152,26,0.4)',
@@ -40,7 +61,7 @@ export default function Home() {
 
         <h1 style={{
           fontFamily: 'Playfair Display, serif',
-          fontSize: 'clamp(2.5rem, 6vw, 4.5rem)',
+          fontSize: 'clamp(2rem, 5vw, 3.8rem)',
           color: 'white',
           lineHeight: 1.1,
           maxWidth: '700px',
@@ -64,7 +85,7 @@ export default function Home() {
         </div>
 
         {/* Feature pills */}
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '1rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '0.5rem' }}>
           {['📊 Progress Reports', '💬 Direct Messaging', '🎥 Virtual PTA Meetings', '📢 Announcements'].map(f => (
             <span key={f} style={{
               background: 'rgba(255,255,255,0.1)',
@@ -78,7 +99,7 @@ export default function Home() {
         </div>
 
         {/* Schools */}
-        <div style={{ marginTop: '2rem' }}>
+        <div style={{ marginTop: '1.5rem' }}>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             Partner Schools
           </p>
