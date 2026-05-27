@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabaseClient'
 
@@ -62,12 +61,10 @@ export default function SignupPage() {
         {/* Logo */}
         <div className="auth-logo">
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-            <Image
+            <img
               src="/logo.jpg"
               alt="Puisano360"
-              width={180}
-              height={90}
-              style={{ objectFit: 'contain' }}
+              style={{ height: '90px', width: 'auto', objectFit: 'contain' }}
             />
           </div>
           <p>Create your account to get started</p>
@@ -77,7 +74,6 @@ export default function SignupPage() {
         {success && <div className="success-msg" style={{ marginBottom: '1rem' }}>{success}</div>}
 
         <form onSubmit={handleSignup} className="auth-form">
-          {/* Role toggle */}
           <div style={{ display: 'flex', background: 'var(--off-white)', borderRadius: '10px', padding: '4px', gap: '4px' }}>
             {(['parent', 'teacher'] as const).map(r => (
               <button

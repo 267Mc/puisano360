@@ -1,6 +1,5 @@
 'use client'
 import Link from 'next/link'
-import Image from 'next/image'
 
 export default function Home() {
   return (
@@ -8,7 +7,11 @@ export default function Home() {
       {/* Nav */}
       <nav className="nav">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Image src="/logo.jpg" alt="Puisano360 Logo" width={44} height={44} style={{ borderRadius: '8px', objectFit: 'contain', background: 'white', padding: '2px' }} />
+          <img
+            src="/logo.jpg"
+            alt="Puisano360 Logo"
+            style={{ height: '42px', width: 'auto', borderRadius: '8px', background: 'white', padding: '2px', objectFit: 'contain' }}
+          />
           <span className="nav-logo">Puisano<span>360</span></span>
         </div>
         <div className="nav-right">
@@ -28,20 +31,20 @@ export default function Home() {
         padding: '4rem 1.5rem',
         gap: '1.5rem',
       }}>
-        {/* Logo */}
+
+        {/* Logo card */}
         <div style={{
           background: 'white',
           borderRadius: '20px',
-          padding: '1rem 2rem',
+          padding: '1.25rem 2.5rem',
           boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
           marginBottom: '0.5rem',
+          display: 'inline-block',
         }}>
-          <Image
+          <img
             src="/logo.jpg"
             alt="Puisano360"
-            width={220}
-            height={110}
-            style={{ objectFit: 'contain', display: 'block' }}
+            style={{ height: '100px', width: 'auto', display: 'block', objectFit: 'contain' }}
           />
         </div>
 

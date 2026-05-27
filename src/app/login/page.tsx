@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabaseClient'
 
@@ -65,12 +64,10 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="auth-logo">
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-            <Image
+            <img
               src="/logo.jpg"
               alt="Puisano360"
-              width={180}
-              height={90}
-              style={{ objectFit: 'contain' }}
+              style={{ height: '90px', width: 'auto', objectFit: 'contain' }}
             />
           </div>
           <p>Welcome back — sign in to continue</p>
@@ -107,24 +104,12 @@ export default function LoginPage() {
 
           <div className="form-group">
             <label>Email Address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-            />
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
           </div>
 
           <div className="form-group">
             <label>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-            />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
           </div>
 
           <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center', padding: '0.8rem' }}>
@@ -137,7 +122,6 @@ export default function LoginPage() {
           <Link href="/signup">Create one</Link>
         </div>
 
-        {/* Demo hint */}
         <div style={{
           marginTop: '1.25rem',
           padding: '0.85rem',
