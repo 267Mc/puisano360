@@ -186,16 +186,29 @@ export default function TeacherDashboard() {
     const { data: { publicUrl } } = supabase.storage.from('reports').getPublicUrl(fileName)
     const parent = parents.find(p => p.id === repParent)
 
-    const { data: inserted } = await supabase.from('progress_reports').insert({
-      teacher_id: teacher.id, parent_id: repParent,
-      school_id: teacher.school_id, file_name: repFile.name,
-      report_url: publicUrl, term: repTerm,
-    }).select('*, parents(full_name)').single()
+    const { error: insertErr } = await supabase.from('progress_reports').insert({
+      teacher_id: teacher.id,
+      parent_id:  repParent,
+      school_id:  teacher.school_id,
+      file_name:  repFile.name,
+      report_url: publicUrl,
+      term:       repTerm,
+    })
 
-    if (inserted) setReports(prev => [inserted, ...prev])
+    if (insertErr) {
+      setRepMsg('Save failed: ' + insertErr.message)
+      setRepLoading(false)
+      return
+    }
+
+    // Re-fetch fresh so the uploaded reports list is always accurate
+    const { data: freshReports } = await supabase
+      .from('progress_reports').select('*, parents(full_name)')
+      .eq('teacher_id', teacher.id).order('created_at', { ascending: false })
+    setReports(freshReports ?? [])
+
     setRepMsg(`✅ Report uploaded for ${parent?.full_name}`)
     setRepFile(null)
-    // Reset file input
     const fileInput = document.getElementById('report-file-input') as HTMLInputElement
     if (fileInput) fileInput.value = ''
     setRepLoading(false)

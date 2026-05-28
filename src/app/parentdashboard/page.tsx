@@ -16,6 +16,7 @@ export default function ParentDashboard() {
 
   const [parent, setParent]             = useState<Parent | null>(null)
   const [parentAuthId, setParentAuthId] = useState<string>('')
+  const [parentId, setParentId]         = useState<string>('')
   const [tab, setTab]                   = useState<'announcements'|'meetings'|'reports'|'messages'>('announcements')
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [meetings, setMeetings]           = useState<Meeting[]>([])
@@ -43,6 +44,7 @@ export default function ParentDashboard() {
       .from('parents').select('*').eq('auth_id', user.id).single()
     if (!p) { router.push('/login'); return }
     setParent(p)
+    setParentId(p.id)
 
     // Fetch teacher — try by school_id match
     const { data: teachers } = await supabase
@@ -52,18 +54,18 @@ export default function ParentDashboard() {
     setTeacher(t)
     teacherRef.current = t
 
-    const [ann, meet, rep] = await Promise.all([
+    const [ann, meet] = await Promise.all([
       supabase.from('announcements').select('*, teachers(full_name)')
         .eq('school_id', p.school_id).order('created_at', { ascending: false }),
       supabase.from('pta_meetings').select('*, teachers(full_name)')
         .eq('school_id', p.school_id).order('scheduled_at', { ascending: true }),
-      supabase.from('progress_reports').select('*, teachers(full_name)')
-        .eq('parent_id', p.id).order('created_at', { ascending: false }),
     ])
 
     setAnnouncements(ann.data ?? [])
     setMeetings(meet.data ?? [])
-    setReports(rep.data ?? [])
+
+    // Fetch reports separately — use parent.id (the UUID from parents table)
+    await fetchReports(p.id)
 
     // Load initial messages
     if (t?.auth_id) {
@@ -73,6 +75,15 @@ export default function ParentDashboard() {
     }
 
     setLoading(false)
+  }
+
+  async function fetchReports(pid: string) {
+    const { data, error } = await supabase
+      .from('progress_reports')
+      .select('*, teachers(full_name)')
+      .eq('parent_id', pid)
+      .order('created_at', { ascending: false })
+    setReports(data ?? [])
   }
 
   async function loadMessages(myAuthId: string, teacherAuthId: string) {
@@ -231,16 +242,26 @@ export default function ParentDashboard() {
 
         {tab === 'reports' && (
           <div className="card">
-            <div className="section-title">Progress Reports</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '2px solid var(--gold-pale)' }}>
+              <span className="section-title" style={{ margin: 0, border: 'none', padding: 0 }}>Progress Reports</span>
+              <button
+                onClick={() => parent && fetchReports(parentId)}
+                className="btn btn-outline"
+                style={{ fontSize: '0.82rem', padding: '0.35rem 0.9rem' }}
+              >
+                🔄 Refresh
+              </button>
+            </div>
             {reports.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">📄</div>
                 <p>No reports uploaded yet. Your teacher will upload them here.</p>
+                <p style={{ fontSize: '0.8rem', marginTop: '0.4rem' }}>If a report was just uploaded, tap Refresh above.</p>
               </div>
             ) : reports.map(r => (
               <div key={r.id} className="report-row">
                 <div className="report-info">
-                  <strong>{r.file_name}</strong>
+                  <strong>{r.file_name || 'Progress Report'}</strong>
                   <span>{r.term} · Uploaded {new Date(r.created_at).toLocaleDateString('en-GB')} by {r.teachers?.full_name}</span>
                 </div>
                 <a href={r.report_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '0.45rem 1rem' }}>View PDF</a>
