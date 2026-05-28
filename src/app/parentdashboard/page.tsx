@@ -16,7 +16,6 @@ export default function ParentDashboard() {
 
   const [parent, setParent]             = useState<Parent | null>(null)
   const [parentAuthId, setParentAuthId] = useState<string>('')
-  const [parentId, setParentId]         = useState<string>('')
   const [tab, setTab]                   = useState<'announcements'|'meetings'|'reports'|'messages'>('announcements')
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [meetings, setMeetings]           = useState<Meeting[]>([])
@@ -26,8 +25,9 @@ export default function ParentDashboard() {
   const [newMsg, setNewMsg]               = useState('')
   const [loading, setLoading]             = useState(true)
   const [sending, setSending]             = useState(false)
-  const [debugInfo, setDebugInfo]         = useState<string[]>([])
-  const msgEnd = useRef<HTMLDivElement>(null)
+  const msgEnd   = useRef<HTMLDivElement>(null)
+  const teacherRef = useRef<Teacher | null>(null)
+  const parentAuthIdRef = useRef<string>('')
 
   useEffect(() => { loadAll() }, [])
   useEffect(() => { msgEnd.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
@@ -37,77 +37,93 @@ export default function ParentDashboard() {
     if (!user) { router.push('/login'); return }
 
     setParentAuthId(user.id)
+    parentAuthIdRef.current = user.id
 
-    // Load parent profile
-    const { data: p, error: pErr } = await supabase
+    const { data: p } = await supabase
       .from('parents').select('*').eq('auth_id', user.id).single()
     if (!p) { router.push('/login'); return }
     setParent(p)
-    setParentId(p.id)
 
-    const debug: string[] = []
-    debug.push(`Parent auth_id: ${user.id}`)
-    debug.push(`Parent id: ${p.id}`)
-    debug.push(`Parent school_id: ${p.school_id}`)
+    // Fetch teacher — try by school_id match
+    const { data: teachers } = await supabase
+      .from('teachers').select('id, full_name, auth_id').eq('school_id', p.school_id)
+    
+    const t = teachers && teachers.length > 0 ? teachers[0] : null
+    setTeacher(t)
+    teacherRef.current = t
 
-    // Load teacher for this school
-    const { data: t, error: tErr } = await supabase
-      .from('teachers').select('id, full_name, auth_id').eq('school_id', p.school_id).single()
-    debug.push(`Teacher found: ${t ? t.full_name : 'NONE'} | auth_id: ${t?.auth_id ?? 'NULL'}`)
-    setTeacher(t ?? null)
+    const [ann, meet, rep] = await Promise.all([
+      supabase.from('announcements').select('*, teachers(full_name)')
+        .eq('school_id', p.school_id).order('created_at', { ascending: false }),
+      supabase.from('pta_meetings').select('*, teachers(full_name)')
+        .eq('school_id', p.school_id).order('scheduled_at', { ascending: true }),
+      supabase.from('progress_reports').select('*, teachers(full_name)')
+        .eq('parent_id', p.id).order('created_at', { ascending: false }),
+    ])
 
-    // Load announcements
-    const { data: ann } = await supabase
-      .from('announcements').select('*, teachers(full_name)')
-      .eq('school_id', p.school_id).order('created_at', { ascending: false })
-    setAnnouncements(ann ?? [])
+    setAnnouncements(ann.data ?? [])
+    setMeetings(meet.data ?? [])
+    setReports(rep.data ?? [])
 
-    // Load meetings
-    const { data: meet } = await supabase
-      .from('pta_meetings').select('*, teachers(full_name)')
-      .eq('school_id', p.school_id).order('scheduled_at', { ascending: true })
-    setMeetings(meet ?? [])
-
-    // Load reports — fetch ALL reports then filter client-side as fallback
-    const { data: rep, error: repErr } = await supabase
-      .from('progress_reports').select('*, teachers(full_name)')
-      .eq('parent_id', p.id).order('created_at', { ascending: false })
-    debug.push(`Reports for parent_id ${p.id}: ${rep?.length ?? 0} | error: ${repErr?.message ?? 'none'}`)
-    setReports(rep ?? [])
-
-    // Load messages using both possible ID combos
+    // Load initial messages
     if (t?.auth_id) {
-      const { data: msgs, error: msgErr } = await supabase
-        .from('messages').select('*')
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${t.auth_id}),and(sender_id.eq.${t.auth_id},receiver_id.eq.${user.id})`)
-        .order('created_at', { ascending: true })
-      debug.push(`Messages found: ${msgs?.length ?? 0} | error: ${msgErr?.message ?? 'none'}`)
-      setMessages(msgs ?? [])
-    } else {
-      debug.push('Skipped message load — teacher has no auth_id. Fix in Supabase Auth.')
+      await loadMessages(user.id, t.auth_id)
+      // Subscribe to realtime
+      subscribeToMessages(user.id, t.auth_id)
     }
 
-    setDebugInfo(debug)
     setLoading(false)
   }
 
+  async function loadMessages(myAuthId: string, teacherAuthId: string) {
+    const { data } = await supabase
+      .from('messages').select('*')
+      .or(`and(sender_id.eq.${myAuthId},receiver_id.eq.${teacherAuthId}),and(sender_id.eq.${teacherAuthId},receiver_id.eq.${myAuthId})`)
+      .order('created_at', { ascending: true })
+    setMessages(data ?? [])
+  }
+
+  function subscribeToMessages(myAuthId: string, teacherAuthId: string) {
+    supabase
+      .channel('parent-messages')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+      }, (payload) => {
+        const msg = payload.new as Message
+        // Only add if it's part of this conversation
+        const isRelevant =
+          (msg.sender_id === myAuthId    && msg.receiver_id === teacherAuthId) ||
+          (msg.sender_id === teacherAuthId && msg.receiver_id === myAuthId)
+        if (isRelevant) {
+          setMessages(prev => {
+            // Avoid duplicates
+            if (prev.find(m => m.id === msg.id)) return prev
+            return [...prev, msg]
+          })
+        }
+      })
+      .subscribe()
+  }
+
   async function sendMessage() {
-    if (!newMsg.trim() || !teacher?.auth_id || !parentAuthId) return
+    if (!newMsg.trim() || !teacherRef.current?.auth_id || !parentAuthIdRef.current) return
     setSending(true)
-
-    const { data, error } = await supabase.from('messages').insert({
-      sender_id:   parentAuthId,
-      receiver_id: teacher.auth_id,
-      sender_role: 'parent',
-      content:     newMsg.trim(),
-    }).select().single()
-
-    if (data) setMessages(prev => [...prev, data])
+    const content = newMsg.trim()
     setNewMsg('')
+
+    await supabase.from('messages').insert({
+      sender_id:   parentAuthIdRef.current,
+      receiver_id: teacherRef.current.auth_id,
+      sender_role: 'parent',
+      content,
+    })
     setSending(false)
   }
 
   async function signOut() {
+    await supabase.channel('parent-messages').unsubscribe()
     await supabase.auth.signOut()
     router.push('/login')
   }
@@ -117,7 +133,6 @@ export default function ParentDashboard() {
   )
 
   const now = new Date()
-  const teacherMissingAuthId = teacher && !teacher.auth_id
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--off-white)' }}>
@@ -140,7 +155,6 @@ export default function ParentDashboard() {
           <p>Stay connected with your child&apos;s school</p>
         </div>
 
-        {/* Stats */}
         <div className="grid-3" style={{ marginBottom: '2rem' }}>
           <div className="stat-card">
             <div className="stat-icon">📢</div>
@@ -159,7 +173,6 @@ export default function ParentDashboard() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="tabs">
           {([
             { key: 'announcements', label: '📢 Announcements' },
@@ -173,7 +186,6 @@ export default function ParentDashboard() {
           ))}
         </div>
 
-        {/* ── Announcements ── */}
         {tab === 'announcements' && (
           <div className="card">
             <div className="section-title">School Announcements</div>
@@ -181,17 +193,13 @@ export default function ParentDashboard() {
               <div className="empty-state"><div className="empty-icon">📢</div><p>No announcements yet.</p></div>
             ) : announcements.map(a => (
               <div key={a.id} className="announcement-item">
-                <h4>{a.title}</h4>
-                <p>{a.body}</p>
-                <div className="date">
-                  By {a.teachers?.full_name} · {new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                </div>
+                <h4>{a.title}</h4><p>{a.body}</p>
+                <div className="date">By {a.teachers?.full_name} · {new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
               </div>
             ))}
           </div>
         )}
 
-        {/* ── PTA Meetings ── */}
         {tab === 'meetings' && (
           <div>
             <div className="section-title">PTA Meetings</div>
@@ -200,7 +208,7 @@ export default function ParentDashboard() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {meetings.map(m => {
-                  const date  = new Date(m.scheduled_at)
+                  const date = new Date(m.scheduled_at)
                   const isPast = date < now
                   return (
                     <div key={m.id} className="meeting-card" style={{ opacity: isPast ? 0.7 : 1 }}>
@@ -210,13 +218,9 @@ export default function ParentDashboard() {
                           {isPast ? 'Past' : 'Upcoming'}
                         </span>
                       </div>
-                      <div className="meeting-time">
-                        🗓 {date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · 🕐 {date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                      </div>
+                      <div className="meeting-time">🗓 {date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · 🕐 {date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
                       <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Hosted by {m.teachers?.full_name}</div>
-                      {!isPast && (
-                        <a href={m.meeting_link} target="_blank" rel="noopener noreferrer" className="join-btn">🎥 Join Meeting</a>
-                      )}
+                      {!isPast && <a href={m.meeting_link} target="_blank" rel="noopener noreferrer" className="join-btn">🎥 Join Meeting</a>}
                     </div>
                   )
                 })}
@@ -225,7 +229,6 @@ export default function ParentDashboard() {
           </div>
         )}
 
-        {/* ── Progress Reports ── */}
         {tab === 'reports' && (
           <div className="card">
             <div className="section-title">Progress Reports</div>
@@ -233,9 +236,6 @@ export default function ParentDashboard() {
               <div className="empty-state">
                 <div className="empty-icon">📄</div>
                 <p>No reports uploaded yet. Your teacher will upload them here.</p>
-                <p style={{ fontSize: '0.8rem', marginTop: '0.5rem', color: 'var(--text-muted)' }}>
-                  If a report was just uploaded, try refreshing the page.
-                </p>
               </div>
             ) : reports.map(r => (
               <div key={r.id} className="report-row">
@@ -243,63 +243,48 @@ export default function ParentDashboard() {
                   <strong>{r.file_name}</strong>
                   <span>{r.term} · Uploaded {new Date(r.created_at).toLocaleDateString('en-GB')} by {r.teachers?.full_name}</span>
                 </div>
-                <a href={r.report_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '0.45rem 1rem' }}>
-                  View PDF
-                </a>
+                <a href={r.report_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '0.45rem 1rem' }}>View PDF</a>
               </div>
             ))}
           </div>
         )}
 
-        {/* ── Messages ── */}
         {tab === 'messages' && (
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div className="section-title">
               {teacher ? `Chat with ${teacher.full_name}` : 'Messages'}
             </div>
 
-            {/* Warning if teacher has no auth_id */}
-            {teacherMissingAuthId && (
-              <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: '8px', padding: '0.85rem 1rem', fontSize: '0.88rem', color: '#856404' }}>
-                ⚠️ Your teacher&apos;s account is not fully linked yet. Ask your school admin to run the <strong>UPDATE teachers SET auth_id</strong> SQL for {teacher.full_name}.
-              </div>
-            )}
-
             {!teacher ? (
               <div className="empty-state"><div className="empty-icon">💬</div><p>No teacher found for your school yet.</p></div>
+            ) : !teacher.auth_id ? (
+              <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: '8px', padding: '1rem', fontSize: '0.9rem', color: '#856404' }}>
+                ⚠️ Your teacher&apos;s account is not fully set up yet. Please ask your school to complete the setup.
+              </div>
             ) : (
               <>
-                {/* Teacher info bar */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', background: 'var(--green-pale)', borderRadius: '10px', border: '1px solid var(--border)' }}>
                   <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '1.1rem', flexShrink: 0 }}>
                     {teacher.full_name.split(' ').pop()?.charAt(0) ?? 'T'}
                   </div>
                   <div>
                     <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.95rem' }}>{teacher.full_name}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Class Teacher · {parent?.full_name.split(' ')[0]}&apos;s school</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Class Teacher</div>
                   </div>
-                  <div style={{ marginLeft: 'auto' }}>
-                    <span style={{ background: teacher.auth_id ? 'var(--green-pale)' : '#fff3cd', color: teacher.auth_id ? 'var(--green)' : '#856404', border: `1px solid ${teacher.auth_id ? 'var(--green)' : '#ffc107'}`, borderRadius: '999px', padding: '0.2rem 0.75rem', fontSize: '0.78rem', fontWeight: 600 }}>
-                      {teacher.auth_id ? '🟢 Available' : '🟡 Not linked'}
-                    </span>
-                  </div>
+                  <span style={{ marginLeft: 'auto', background: 'var(--green-pale)', color: 'var(--green)', border: '1px solid var(--green)', borderRadius: '999px', padding: '0.2rem 0.75rem', fontSize: '0.78rem', fontWeight: 600 }}>
+                    🟢 Online
+                  </span>
                 </div>
 
-                {/* Message list */}
-                <div className="message-list" style={{ minHeight: '200px' }}>
+                <div className="message-list" style={{ minHeight: '220px' }}>
                   {messages.length === 0 && (
-                    <div className="empty-state">
-                      <div className="empty-icon">💬</div>
-                      <p>No messages yet. Send a message to start the conversation!</p>
-                    </div>
+                    <div className="empty-state"><div className="empty-icon">💬</div><p>No messages yet. Send a message to start the conversation!</p></div>
                   )}
                   {messages.map(m => {
                     const isMine = m.sender_role === 'parent'
                     return (
                       <div key={m.id} style={{ display: 'flex', flexDirection: 'column' }}>
-                        <div className={`message-bubble ${isMine ? 'sent' : 'received'}`}>
-                          {m.content}
-                        </div>
+                        <div className={`message-bubble ${isMine ? 'sent' : 'received'}`}>{m.content}</div>
                         <div className="message-meta" style={{ alignSelf: isMine ? 'flex-end' : 'flex-start' }}>
                           {isMine ? 'You' : teacher.full_name} · {new Date(m.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                         </div>
@@ -309,19 +294,11 @@ export default function ParentDashboard() {
                   <div ref={msgEnd} />
                 </div>
 
-                {/* Input */}
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <input
-                    type="text"
-                    value={newMsg}
-                    onChange={e => setNewMsg(e.target.value)}
-                    placeholder={teacher.auth_id ? `Message ${teacher.full_name}…` : 'Teacher account not linked yet'}
-                    disabled={!teacher.auth_id}
-                    onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                    style={{ opacity: teacher.auth_id ? 1 : 0.6 }}
-                  />
-                  <button onClick={sendMessage} className="btn btn-primary"
-                    disabled={sending || !newMsg.trim() || !teacher.auth_id}>
+                  <input type="text" value={newMsg} onChange={e => setNewMsg(e.target.value)}
+                    placeholder={`Message ${teacher.full_name}…`}
+                    onKeyDown={e => e.key === 'Enter' && !sending && sendMessage()} />
+                  <button onClick={sendMessage} className="btn btn-primary" disabled={sending || !newMsg.trim()}>
                     {sending ? '…' : 'Send'}
                   </button>
                 </div>
