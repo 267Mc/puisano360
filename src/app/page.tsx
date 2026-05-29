@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { useLang } from '@/lib/LanguageContext'
 import { tr } from '@/lib/translations'
-import LanguageToggle from '@/components/LanguageToggle'
+import LanguageToggle from '@/lib/LanguageToggle'
 
 export default function Home() {
   const { lang } = useLang()

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabaseClient'
 import { useLang } from '@/lib/LanguageContext'
 import { tr } from '@/lib/translations'
-import LanguageToggle from '@/components/LanguageToggle'
+import LanguageToggle from '@/lib/LanguageToggle'
 
 export default function ResetPasswordPage() {
   const router   = useRouter()

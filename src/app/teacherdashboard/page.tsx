@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabaseClient'
 import { useLang } from '@/lib/LanguageContext'
 import { tr } from '@/lib/translations'
-import LanguageToggle from '@/components/LanguageToggle'
+import LanguageToggle from '@/lib/LanguageToggle'
 
 type Teacher = { id: string; full_name: string; school_id: string; auth_id: string; email: string }
 type Parent  = { id: string; full_name: string; email: string; auth_id: string }
