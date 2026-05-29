@@ -2,6 +2,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabaseClient'
+import { useLang } from '@/lib/LanguageContext'
+import { tr } from '@/lib/translations'
+import LanguageToggle from '@/components/LanguageToggle'
 
 type Parent = { id: string; full_name: string; school_id: string; email: string }
 type Announcement = { id: string; title: string; body: string; created_at: string; teachers: { full_name: string } }
@@ -13,6 +16,7 @@ type Teacher = { id: string; full_name: string; auth_id: string }
 export default function ParentDashboard() {
   const router   = useRouter()
   const supabase = createClient()
+  const { lang } = useLang()
 
   const [parent, setParent]             = useState<Parent | null>(null)
   const [parentAuthId, setParentAuthId] = useState<string>('')
@@ -153,6 +157,7 @@ export default function ParentDashboard() {
           <span className="nav-logo">Puisano<span>360</span></span>
         </div>
         <div className="nav-right">
+          <LanguageToggle />
           <span className="nav-user">👋 {parent?.full_name}</span>
           <button onClick={signOut} className="btn btn-outline" style={{ borderColor: 'rgba(255,255,255,0.4)', color: 'white', padding: '0.45rem 1rem', fontSize: '0.85rem' }}>
             Sign Out
@@ -163,33 +168,33 @@ export default function ParentDashboard() {
       <div className="dashboard">
         <div className="dashboard-header">
           <h1>Welcome back, {parent?.full_name.split(' ')[0]}!</h1>
-          <p>Stay connected with your child&apos;s school</p>
+          <p>{tr('stayConnected', lang)}</p>
         </div>
 
         <div className="grid-3" style={{ marginBottom: '2rem' }}>
           <div className="stat-card">
             <div className="stat-icon">📢</div>
             <div className="stat-num">{announcements.length}</div>
-            <div className="stat-label">Announcements</div>
+            <div className="stat-label">{tr('announcementsCount', lang)}</div>
           </div>
           <div className="stat-card">
             <div className="stat-icon">📅</div>
             <div className="stat-num">{meetings.filter(m => new Date(m.scheduled_at) >= now).length}</div>
-            <div className="stat-label">Upcoming Meetings</div>
+            <div className="stat-label">{tr('upcomingMeetings', lang)}</div>
           </div>
           <div className="stat-card">
             <div className="stat-icon">📄</div>
             <div className="stat-num">{reports.length}</div>
-            <div className="stat-label">Progress Reports</div>
+            <div className="stat-label">{tr('progressReportsCount', lang)}</div>
           </div>
         </div>
 
         <div className="tabs">
           {([
-            { key: 'announcements', label: '📢 Announcements' },
-            { key: 'meetings',      label: '🎥 PTA Meetings'  },
-            { key: 'reports',       label: '📊 Progress Reports' },
-            { key: 'messages',      label: '💬 Messages' },
+            { key: 'announcements', label: tr('announcementsTab', lang) },
+            { key: 'meetings',      label: tr('ptaMeetingsTab', lang) },
+            { key: 'reports',       label: tr('progressReportsTab', lang) },
+            { key: 'messages',      label: tr('messagesTab', lang) },
           ] as const).map(t => (
             <button key={t.key} className={`tab-btn ${tab === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)}>
               {t.label}
@@ -199,9 +204,9 @@ export default function ParentDashboard() {
 
         {tab === 'announcements' && (
           <div className="card">
-            <div className="section-title">School Announcements</div>
+            <div className="section-title">{tr('schoolAnnouncements', lang)}</div>
             {announcements.length === 0 ? (
-              <div className="empty-state"><div className="empty-icon">📢</div><p>No announcements yet.</p></div>
+              <div className="empty-state"><div className="empty-icon">📢</div><p>{tr('noAnnouncements', lang)}</p></div>
             ) : announcements.map(a => (
               <div key={a.id} className="announcement-item">
                 <h4>{a.title}</h4><p>{a.body}</p>
@@ -213,9 +218,9 @@ export default function ParentDashboard() {
 
         {tab === 'meetings' && (
           <div>
-            <div className="section-title">PTA Meetings</div>
+            <div className="section-title">{tr('ptaMeetingsTab', lang).replace('🎥 ', '')}</div>
             {meetings.length === 0 ? (
-              <div className="card"><div className="empty-state"><div className="empty-icon">🎥</div><p>No meetings scheduled yet.</p></div></div>
+              <div className="card"><div className="empty-state"><div className="empty-icon">🎥</div><p>{tr('noMeetings', lang)}</p></div></div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {meetings.map(m => {
@@ -226,12 +231,12 @@ export default function ParentDashboard() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <h4>{m.title}</h4>
                         <span style={{ background: isPast ? 'rgba(201,152,26,0.3)' : 'rgba(255,255,255,0.2)', color: 'white', padding: '0.2rem 0.75rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 600 }}>
-                          {isPast ? 'Past' : 'Upcoming'}
+                          {isPast ? tr('past', lang) : tr('upcoming', lang)}
                         </span>
                       </div>
                       <div className="meeting-time">🗓 {date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · 🕐 {date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
-                      <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>Hosted by {m.teachers?.full_name}</div>
-                      {!isPast && <a href={m.meeting_link} target="_blank" rel="noopener noreferrer" className="join-btn">🎥 Join Meeting</a>}
+                      <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>{tr('hostedBy', lang)} {m.teachers?.full_name}</div>
+                      {!isPast && <a href={m.meeting_link} target="_blank" rel="noopener noreferrer" className="join-btn">{tr('joinMeeting', lang)}</a>}
                     </div>
                   )
                 })}
@@ -255,16 +260,16 @@ export default function ParentDashboard() {
             {reports.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">📄</div>
-                <p>No reports uploaded yet. Your teacher will upload them here.</p>
+                <p>{tr('noReports', lang)}</p>
                 <p style={{ fontSize: '0.8rem', marginTop: '0.4rem' }}>If a report was just uploaded, tap Refresh above.</p>
               </div>
             ) : reports.map(r => (
               <div key={r.id} className="report-row">
                 <div className="report-info">
                   <strong>{r.file_name || 'Progress Report'}</strong>
-                  <span>{r.term} · Uploaded {new Date(r.created_at).toLocaleDateString('en-GB')} by {r.teachers?.full_name}</span>
+                  <span>{r.term} · {tr('uploaded', lang)} {new Date(r.created_at).toLocaleDateString('en-GB')} {tr('by', lang)} {r.teachers?.full_name}</span>
                 </div>
-                <a href={r.report_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '0.45rem 1rem' }}>View PDF</a>
+                <a href={r.report_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '0.45rem 1rem' }}>{tr('viewPDF', lang)}</a>
               </div>
             ))}
           </div>
@@ -273,11 +278,11 @@ export default function ParentDashboard() {
         {tab === 'messages' && (
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div className="section-title">
-              {teacher ? `Chat with ${teacher.full_name}` : 'Messages'}
+              {teacher ? `${tr('chatWith', lang)} ${teacher.full_name}` : tr('messages', lang)}
             </div>
 
             {!teacher ? (
-              <div className="empty-state"><div className="empty-icon">💬</div><p>No teacher found for your school yet.</p></div>
+              <div className="empty-state"><div className="empty-icon">💬</div><p>{tr('noTeacher', lang)}</p></div>
             ) : !teacher.auth_id ? (
               <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: '8px', padding: '1rem', fontSize: '0.9rem', color: '#856404' }}>
                 ⚠️ Your teacher&apos;s account is not fully set up yet. Please ask your school to complete the setup.
@@ -299,7 +304,7 @@ export default function ParentDashboard() {
 
                 <div className="message-list" style={{ minHeight: '220px' }}>
                   {messages.length === 0 && (
-                    <div className="empty-state"><div className="empty-icon">💬</div><p>No messages yet. Send a message to start the conversation!</p></div>
+                    <div className="empty-state"><div className="empty-icon">💬</div><p>{tr('noMessages', lang)}</p></div>
                   )}
                   {messages.map(m => {
                     const isMine = m.sender_role === 'parent'
@@ -307,7 +312,7 @@ export default function ParentDashboard() {
                       <div key={m.id} style={{ display: 'flex', flexDirection: 'column' }}>
                         <div className={`message-bubble ${isMine ? 'sent' : 'received'}`}>{m.content}</div>
                         <div className="message-meta" style={{ alignSelf: isMine ? 'flex-end' : 'flex-start' }}>
-                          {isMine ? 'You' : teacher.full_name} · {new Date(m.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                          {isMine ? tr('you', lang) : teacher.full_name} · {new Date(m.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
                     )
@@ -317,10 +322,10 @@ export default function ParentDashboard() {
 
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
                   <input type="text" value={newMsg} onChange={e => setNewMsg(e.target.value)}
-                    placeholder={`Message ${teacher.full_name}…`}
+                    placeholder={`${tr('typeMessage', lang).replace('…', '')} ${teacher.full_name}…`}
                     onKeyDown={e => e.key === 'Enter' && !sending && sendMessage()} />
                   <button onClick={sendMessage} className="btn btn-primary" disabled={sending || !newMsg.trim()}>
-                    {sending ? '…' : 'Send'}
+                    {sending ? '…' : tr('send', lang)}
                   </button>
                 </div>
               </>

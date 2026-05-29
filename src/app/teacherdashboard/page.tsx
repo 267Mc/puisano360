@@ -2,6 +2,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabaseClient'
+import { useLang } from '@/lib/LanguageContext'
+import { tr } from '@/lib/translations'
+import LanguageToggle from '@/components/LanguageToggle'
 
 type Teacher = { id: string; full_name: string; school_id: string; auth_id: string; email: string }
 type Parent  = { id: string; full_name: string; email: string; auth_id: string }
@@ -15,6 +18,7 @@ const ZOOM_LINK = 'https://us05web.zoom.us/j/83583305542?pwd=u5NGRNSfKPeexY1KcT4
 export default function TeacherDashboard() {
   const router   = useRouter()
   const supabase = createClient()
+  const { lang } = useLang()
 
   const [teacher, setTeacher]             = useState<Teacher | null>(null)
   const [parents, setParents]             = useState<Parent[]>([])
@@ -232,41 +236,42 @@ export default function TeacherDashboard() {
           <span className="nav-logo">Puisano<span>360</span></span>
         </div>
         <div className="nav-right">
+          <LanguageToggle />
           <span className="nav-user">🏫 {teacher?.full_name}</span>
-          <button onClick={signOut} className="btn btn-outline" style={{ borderColor: 'rgba(255,255,255,0.4)', color: 'white', padding: '0.45rem 1rem', fontSize: '0.85rem' }}>Sign Out</button>
+          <button onClick={signOut} className="btn btn-outline" style={{ borderColor: 'rgba(255,255,255,0.4)', color: 'white', padding: '0.45rem 1rem', fontSize: '0.85rem' }}>{tr('signOut', lang)}</button>
         </div>
       </nav>
 
       <div className="dashboard">
         <div className="dashboard-header">
-          <h1>Teacher Dashboard</h1>
-          <p>Manage your class communications and updates</p>
+          <h1>{tr('teacherDashboard', lang)}</h1>
+          <p>{tr('manageComms', lang)}</p>
         </div>
 
         <div className="grid-3" style={{ marginBottom: '2rem' }}>
           <div className="stat-card">
             <div className="stat-icon">👨‍👩‍👧</div>
             <div className="stat-num">{parents.length}</div>
-            <div className="stat-label">Parents in School</div>
+            <div className="stat-label">{tr('parentsInSchool', lang)}</div>
           </div>
           <div className="stat-card">
             <div className="stat-icon">📢</div>
             <div className="stat-num">{announcements.length}</div>
-            <div className="stat-label">Announcements</div>
+            <div className="stat-label">{tr('announcementsPosted', lang)}</div>
           </div>
           <div className="stat-card">
             <div className="stat-icon">📄</div>
             <div className="stat-num">{reports.length}</div>
-            <div className="stat-label">Reports Uploaded</div>
+            <div className="stat-label">{tr('reportsUploadedStat', lang)}</div>
           </div>
         </div>
 
         <div className="tabs">
           {([
-            { key: 'announcements', label: '📢 Post Announcement' },
-            { key: 'meetings',      label: '🎥 Schedule Meeting'  },
-            { key: 'reports',       label: '📊 Upload Reports'    },
-            { key: 'messages',      label: '💬 Message Parents'   },
+            { key: 'announcements', label: tr('postAnnouncementTab', lang) },
+            { key: 'meetings',      label: tr('scheduleMeetingTab', lang) },
+            { key: 'reports',       label: tr('uploadReportsTab', lang) },
+            { key: 'messages',      label: tr('messageParentsTab', lang) },
           ] as const).map(t => (
             <button key={t.key} className={`tab-btn ${tab === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)}>
               {t.label}
@@ -278,25 +283,25 @@ export default function TeacherDashboard() {
         {tab === 'announcements' && (
           <div className="grid-2">
             <div className="card">
-              <div className="section-title">Post New Announcement</div>
+              <div className="section-title">{tr('postNewAnnouncement', lang)}</div>
               <form onSubmit={postAnnouncement} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div className="form-group">
-                  <label>Title</label>
-                  <input value={annTitle} onChange={e => setAnnTitle(e.target.value)} placeholder="e.g. School Sports Day" required />
+                  <label>{tr('titleLabel', lang)}</label>
+                  <input value={annTitle} onChange={e => setAnnTitle(e.target.value)} placeholder={tr('annTitlePlaceholder', lang)} required />
                 </div>
                 <div className="form-group">
-                  <label>Message</label>
-                  <textarea value={annBody} onChange={e => setAnnBody(e.target.value)} placeholder="Write your announcement here…" rows={5} required style={{ resize: 'vertical' }} />
+                  <label>{tr('messageLabel', lang)}</label>
+                  <textarea value={annBody} onChange={e => setAnnBody(e.target.value)} placeholder={tr('annBodyPlaceholder', lang)} rows={5} required style={{ resize: 'vertical' }} />
                 </div>
                 <button type="submit" className="btn btn-primary" disabled={annLoading}>
-                  {annLoading ? 'Posting…' : '📢 Post Announcement'}
+                  {annLoading ? tr('posting', lang) : tr('postBtn', lang)}
                 </button>
               </form>
             </div>
             <div className="card">
-              <div className="section-title">Your Announcements</div>
+              <div className="section-title">{tr('yourAnnouncements', lang)}</div>
               {announcements.length === 0 ? (
-                <div className="empty-state"><div className="empty-icon">📢</div><p>No announcements yet.</p></div>
+                <div className="empty-state"><div className="empty-icon">📢</div><p>{tr('noAnnouncements', lang)}</p></div>
               ) : announcements.map(a => (
                 <div key={a.id} className="announcement-item">
                   <h4>{a.title}</h4><p>{a.body}</p>
@@ -311,37 +316,37 @@ export default function TeacherDashboard() {
         {tab === 'meetings' && (
           <div className="grid-2">
             <div className="card">
-              <div className="section-title">Schedule PTA Meeting</div>
+              <div className="section-title">{tr('schedulePTA', lang)}</div>
               <form onSubmit={scheduleMeeting} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div className="form-group">
-                  <label>Meeting Title</label>
-                  <input value={meetTitle} onChange={e => setMeetTitle(e.target.value)} placeholder="e.g. Term 2 PTA Meeting" required />
+                  <label>{tr('meetingTitleLabel', lang)}</label>
+                  <input value={meetTitle} onChange={e => setMeetTitle(e.target.value)} placeholder={tr('meetingTitlePH', lang)} required />
                 </div>
                 <div className="form-group">
-                  <label>Zoom Meeting Link</label>
+                  <label>{tr('zoomLinkLabel', lang)}</label>
                   <input value={meetLink} onChange={e => setMeetLink(e.target.value)} placeholder="https://zoom.us/j/..." required />
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>✅ Pre-filled with your Zoom link</span>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>{tr('zoomPrefilled', lang)}</span>
                 </div>
                 <div className="form-group">
-                  <label>Date &amp; Time</label>
+                  <label>{tr('dateTimeLabel', lang)}</label>
                   <input type="datetime-local" value={meetDate} onChange={e => setMeetDate(e.target.value)} required />
                 </div>
                 <button type="submit" className="btn btn-primary" disabled={meetLoading}>
-                  {meetLoading ? 'Scheduling…' : '📅 Schedule Meeting'}
+                  {meetLoading ? tr('scheduling', lang) : tr('scheduleBtn', lang)}
                 </button>
               </form>
             </div>
             <div className="card">
-              <div className="section-title">Scheduled Meetings</div>
+              <div className="section-title">{tr('scheduledMeetings', lang)}</div>
               {meetings.length === 0 ? (
-                <div className="empty-state"><div className="empty-icon">📅</div><p>No meetings scheduled yet.</p></div>
+                <div className="empty-state"><div className="empty-icon">📅</div><p>{tr('noMeetings', lang)}</p></div>
               ) : meetings.map(m => (
                 <div key={m.id} className="meeting-card" style={{ marginBottom: '1rem' }}>
                   <h4>{m.title}</h4>
                   <div className="meeting-time">
                     {new Date(m.scheduled_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · {new Date(m.scheduled_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                   </div>
-                  <a href={m.meeting_link} target="_blank" rel="noopener noreferrer" className="join-btn">Open Zoom Link</a>
+                  <a href={m.meeting_link} target="_blank" rel="noopener noreferrer" className="join-btn">{tr('openZoom', lang)}</a>
                 </div>
               ))}
             </div>
@@ -352,36 +357,36 @@ export default function TeacherDashboard() {
         {tab === 'reports' && (
           <div className="grid-2">
             <div className="card">
-              <div className="section-title">Upload Progress Report</div>
+              <div className="section-title">{tr('uploadProgressReport', lang)}</div>
               {repMsg && <div className={repMsg.startsWith('Upload failed') ? 'error-msg' : 'success-msg'} style={{ marginBottom: '1rem' }}>{repMsg}</div>}
               <form onSubmit={uploadReport} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div className="form-group">
-                  <label>Select Parent</label>
+                  <label>{tr('selectParentLabel', lang)}</label>
                   <select value={repParent} onChange={e => setRepParent(e.target.value)} required>
-                    <option value="">— Choose parent —</option>
+                    <option value="">{tr('chooseParent', lang)}</option>
                     {parents.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Term</label>
+                  <label>{tr('termLabel', lang)}</label>
                   <select value={repTerm} onChange={e => setRepTerm(e.target.value)}>
                     <option>Term 1</option><option>Term 2</option><option>Term 3</option>
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>PDF Report File</label>
+                  <label>{tr('pdfFileLabel', lang)}</label>
                   <input id="report-file-input" type="file" accept=".pdf"
                     onChange={e => setRepFile(e.target.files?.[0] ?? null)} required style={{ padding: '0.5rem 0' }} />
                 </div>
                 <button type="submit" className="btn btn-gold" disabled={repLoading || !repFile || !repParent}>
-                  {repLoading ? 'Uploading…' : '📤 Upload Report'}
+                  {repLoading ? tr('uploading', lang) : tr('uploadBtn', lang)}
                 </button>
               </form>
             </div>
             <div className="card">
-              <div className="section-title">Uploaded Reports</div>
+              <div className="section-title">{tr('uploadedReports', lang)}</div>
               {reports.length === 0 ? (
-                <div className="empty-state"><div className="empty-icon">📄</div><p>No reports uploaded yet.</p></div>
+                <div className="empty-state"><div className="empty-icon">📄</div><p>{tr('noReportsUploaded', lang)}</p></div>
               ) : reports.map(r => (
                 <div key={r.id} className="report-row">
                   <div className="report-info">
@@ -400,9 +405,9 @@ export default function TeacherDashboard() {
           <div className="grid-2">
             {/* Parent list */}
             <div className="card">
-              <div className="section-title">Parents</div>
+              <div className="section-title">{tr('parentsLabel', lang)}</div>
               {parents.length === 0 ? (
-                <div className="empty-state"><div className="empty-icon">👤</div><p>No parents in your school yet.</p></div>
+                <div className="empty-state"><div className="empty-icon">👤</div><p>{tr('noParents', lang)}</p></div>
               ) : parents.map(p => (
                 <div key={p.id} onClick={() => selectParent(p)}
                   style={{
@@ -417,7 +422,7 @@ export default function TeacherDashboard() {
                   </div>
                   <div>
                     <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.92rem' }}>{p.full_name}</div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{p.auth_id ? '🟢 Account linked' : '🔴 Not linked'}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{p.auth_id ? tr('accountLinked', lang) : tr('accountNotLinked', lang)}</div>
                   </div>
                 </div>
               ))}
@@ -426,12 +431,12 @@ export default function TeacherDashboard() {
             {/* Chat panel */}
             <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div className="section-title">
-                {selectedParent ? `Chat with ${selectedParent.full_name}` : 'Select a parent'}
+                {selectedParent ? `${tr('chatWith', lang)} ${selectedParent.full_name}` : tr('selectParentDash', lang)}
               </div>
 
               {selectedParent && !selectedParent.auth_id && (
                 <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: '8px', padding: '0.85rem', fontSize: '0.88rem', color: '#856404' }}>
-                  ⚠️ This parent&apos;s account is not linked yet. They need to sign up or have their auth_id set.
+                  ⚠️ {tr('notLinkedWarning', lang)} They need to sign up or have their auth_id set.
                 </div>
               )}
 
@@ -443,7 +448,7 @@ export default function TeacherDashboard() {
                   <div key={m.id} style={{ display: 'flex', flexDirection: 'column' }}>
                     <div className={`message-bubble ${m.sender_role === 'teacher' ? 'sent' : 'received'}`}>{m.content}</div>
                     <div className="message-meta" style={{ alignSelf: m.sender_role === 'teacher' ? 'flex-end' : 'flex-start' }}>
-                      {m.sender_role === 'teacher' ? 'You' : selectedParent?.full_name} · {new Date(m.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                      {m.sender_role === 'teacher' ? tr('you', lang) : selectedParent?.full_name} · {new Date(m.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 ))}
@@ -452,12 +457,12 @@ export default function TeacherDashboard() {
 
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <input type="text" value={newMsg} onChange={e => setNewMsg(e.target.value)}
-                  placeholder={selectedParent ? `Message ${selectedParent.full_name}…` : 'Select a parent first'}
+                  placeholder={selectedParent ? `${tr('typeMessage', lang).replace('…', '')} ${selectedParent.full_name}…` : tr('selectParentFirst', lang)}
                   disabled={!selectedParent || !selectedParent.auth_id}
                   onKeyDown={e => e.key === 'Enter' && !sending && sendMessage()} />
                 <button onClick={sendMessage} className="btn btn-primary"
                   disabled={sending || !newMsg.trim() || !selectedParent || !selectedParent.auth_id}>
-                  {sending ? '…' : 'Send'}
+                  {sending ? '…' : tr('send', lang)}
                 </button>
               </div>
             </div>
